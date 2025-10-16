@@ -9,21 +9,29 @@ import core.basesyntax.io.impl.CsvReportSerializer;
 import core.basesyntax.model.FruitType;
 import core.basesyntax.model.Report;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class SerializersTest {
-    private static final Path SAVE_PATH = Path.of("testReport.csv");
     private static final FruitType BANANA = new FruitType("banana");
+    private static final String TO_SAVE_FILENAME = "testReport.csv";
 
     private final ReportSerializer serializer = new CsvReportSerializer();
+    @TempDir
+    private Path tmpDir;
+    private Path toSave;
+
+    @BeforeEach
+    void setUp() {
+        toSave = tmpDir.resolve(TO_SAVE_FILENAME);
+    }
 
     @Test
     void save_NullNull_NotOk() {
@@ -32,7 +40,7 @@ public class SerializersTest {
 
     @Test
     void save_NullReport_NotOk() {
-        assertThrows(NullPointerException.class, () -> serializer.save(null, SAVE_PATH));
+        assertThrows(NullPointerException.class, () -> serializer.save(null, toSave));
     }
 
     @Test
@@ -43,8 +51,8 @@ public class SerializersTest {
 
     @Test
     void save_EmptyReport_Ok() {
-        serializer.save(Report.builder().get(), SAVE_PATH);
-        try (BufferedReader reader = Files.newBufferedReader(SAVE_PATH)) {
+        serializer.save(Report.builder().get(), toSave);
+        try (BufferedReader reader = Files.newBufferedReader(toSave)) {
             Stream<String> lines = reader.lines();
             Optional<String> first = lines.findFirst();
             assertTrue(first.isPresent());
@@ -56,8 +64,8 @@ public class SerializersTest {
 
     @Test
     void save_RegularReport_Ok() {
-        serializer.save(Report.builder().set(BANANA, BigInteger.TEN).get(), SAVE_PATH);
-        try (BufferedReader reader = Files.newBufferedReader(SAVE_PATH)) {
+        serializer.save(Report.builder().set(BANANA, BigInteger.TEN).get(), toSave);
+        try (BufferedReader reader = Files.newBufferedReader(toSave)) {
             Stream<String> lines = reader.lines();
             Optional<String> first = lines.skip(1).findFirst();
             assertTrue(first.isPresent());
@@ -68,28 +76,8 @@ public class SerializersTest {
     }
 
     @Test
-    void save_RegularReportToReadOnly_NotOk() {
-        File file = SAVE_PATH.toFile();
-        try {
-            boolean created = file.createNewFile();
-            assertTrue(created);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        boolean readOnly = file.setWritable(false);
-        assertTrue(readOnly);
+    void save_RegularReportToDir_NotOk() {
         assertThrows(RuntimeException.class, () -> serializer
-                .save(Report.builder().set(BANANA, BigInteger.TEN).get(), SAVE_PATH));
-        boolean readable = file.setWritable(true);
-        assertTrue(readable);
-    }
-
-    @AfterEach
-    void clearSaveFile() {
-        try {
-            Files.deleteIfExists(SAVE_PATH);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+                .save(Report.builder().set(BANANA, BigInteger.TEN).get(), tmpDir));
     }
 }

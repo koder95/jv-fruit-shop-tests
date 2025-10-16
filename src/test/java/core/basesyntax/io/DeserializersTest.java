@@ -17,14 +17,23 @@ import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class DeserializersTest {
-    private static final Path LOAD_PATH = Path.of("testTransactions.csv");
+    private static final String TO_LOAD_FILENAME = "testTransactions.csv";
     private final FruitTypeFactory defaultFruitTypeFactory = new DefaultFruitTypeFactory();
     private final TransactionRequestDeserializer deserializer
             = new CsvTransactionRequestDeserializer(defaultFruitTypeFactory);
+    @TempDir
+    private Path tmpDir;
+    private Path toLoad;
+
+    @BeforeEach
+    void setUp() {
+        toLoad = tmpDir.resolve(TO_LOAD_FILENAME);
+    }
 
     @Test
     void loadFrom_Null_NotOk() {
@@ -32,19 +41,24 @@ public class DeserializersTest {
     }
 
     @Test
+    void loadFrom_Dir_NotOk() {
+        assertThrows(RuntimeException.class, () -> deserializer.loadFrom(tmpDir));
+    }
+
+    @Test
     void loadFrom_EmptyFile_Ok() {
         try {
-            Files.createFile(LOAD_PATH);
+            Files.createFile(toLoad);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         assertArrayEquals(new TransactionRequest[0], deserializer
-                .loadFrom(LOAD_PATH).toArray(TransactionRequest[]::new));
+                .loadFrom(toLoad).toArray(TransactionRequest[]::new));
     }
 
     @Test
     void loadFrom_OneCorrectTransactionFile_Ok() {
-        try (BufferedWriter writer = Files.newBufferedWriter(LOAD_PATH)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(toLoad)) {
             writer.write("operation,fruit,quantity");
             writer.newLine();
             writer.write("b,banana,100");
@@ -54,17 +68,9 @@ public class DeserializersTest {
         }
         TransactionRequest expected = new TransactionRequest(TransactionType.BALANCE,
                 new FruitType("banana"), BigInteger.valueOf(100));
-        Optional<TransactionRequest> first = deserializer.loadFrom(LOAD_PATH).stream().findFirst();
+        Optional<TransactionRequest> first = deserializer.loadFrom(toLoad)
+                .stream().findFirst();
         assertTrue(first.isPresent());
         first.ifPresent(actual -> assertEquals(expected, actual));
-    }
-
-    @AfterEach
-    void removeLoadFile() {
-        try {
-            Files.deleteIfExists(LOAD_PATH);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }
