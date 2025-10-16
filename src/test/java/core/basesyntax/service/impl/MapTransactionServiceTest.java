@@ -13,10 +13,6 @@ class MapTransactionServiceTest {
 
     private static MapTransactionService INSTANCE;
 
-    public static MapTransactionService instance() {
-        return INSTANCE;
-    }
-
     @BeforeAll
     static void setUp() {
         HashMap<TransactionType, TransactionHandler> handlers = new HashMap<>();

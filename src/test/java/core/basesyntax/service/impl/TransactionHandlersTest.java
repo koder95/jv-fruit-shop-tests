@@ -8,9 +8,11 @@ import core.basesyntax.db.impl.MapDatabase;
 import core.basesyntax.model.FruitType;
 import core.basesyntax.model.TransactionRequest;
 import core.basesyntax.model.TransactionType;
+import core.basesyntax.service.TransactionHandler;
 import core.basesyntax.service.TransactionService;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,8 +26,12 @@ class TransactionHandlersTest {
 
     @BeforeAll
     static void setUp() {
-        MapTransactionServiceTest.setUp();
-        SERVICE = MapTransactionServiceTest.instance();
+        HashMap<TransactionType, TransactionHandler> handlers = new HashMap<>();
+        handlers.put(TransactionType.BALANCE, new BalanceTransactionHandler());
+        handlers.put(TransactionType.SUPPLY, new SupplyTransactionHandler());
+        handlers.put(TransactionType.PURCHASE, new PurchaseTransactionHandler());
+        handlers.put(TransactionType.RETURN, new ReturnTransactionHandler());
+        SERVICE = new MapTransactionService(handlers);
     }
 
     @BeforeEach
